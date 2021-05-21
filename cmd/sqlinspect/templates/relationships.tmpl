@@ -1,0 +1,3 @@
+{{ range $i, $table := .Tables}}{{range .Relationships}}
+    {{$table.Name}} -- {{.}} [arrowtail=none];
+{{- end -}}{{- end -}}

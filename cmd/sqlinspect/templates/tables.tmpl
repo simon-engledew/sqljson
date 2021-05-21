@@ -1,0 +1,38 @@
+{{range $index, $table := .Tables}}
+  {{.Name}} [label=<<TABLE
+      BORDER="0"
+      CELLPADDING="0"
+      CELLSPACING="0.5"
+      WIDTH="134"
+      ALIGN="CENTER"
+      >
+      <TR>
+        <TD ALIGN="CENTER" VALIGN="BOTTOM" WIDTH="134">
+          <FONT POINT-SIZE="14" FACE="San Francisco bold"><B>{{.Name}}</B></FONT>
+        </TD>
+      </TR>
+    </TABLE>
+    {{- if .Columns -}}
+    |
+    <TABLE
+      BORDER="0"
+      ALIGN="LEFT"
+      CELLPADDING="0"
+      CELLSPACING="4"
+      WIDTH="134">
+      {{- range .Columns}}
+      <TR>
+        <TD ALIGN="LEFT">
+        <FONT POINT-SIZE="12">{{Column .}}</FONT>
+        {{- if .Type -}}
+          <FONT FACE="San Francisco Italic" POINT-SIZE="10" COLOR="#546E7A">&nbsp;{{.Type}}</FONT>
+        {{- end -}}
+        </TD>
+      </TR>
+      {{- end}}
+    </TABLE>
+    {{- end -}}>
+    ,fillcolor="{{Color $table.Name}}",
+    style=filled
+    ];
+{{- end -}}
