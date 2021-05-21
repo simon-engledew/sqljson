@@ -8,7 +8,7 @@
       >
       <TR>
         <TD ALIGN="CENTER" VALIGN="BOTTOM" WIDTH="134">
-          <FONT POINT-SIZE="14" FACE="San Francisco bold"><B>{{.Name}}</B></FONT>
+          <FONT POINT-SIZE="14" FACE="San Francisco bold" COLOR="#263238"><B>{{.Name}}</B></FONT>
         </TD>
       </TR>
     </TABLE>
@@ -23,16 +23,16 @@
       {{- range .Columns}}
       <TR>
         <TD ALIGN="LEFT">
-        <FONT POINT-SIZE="12">{{Column .}}</FONT>
+        <FONT FACE="San Francisco" POINT-SIZE="12" COLOR="#263238">{{- if index $table.Relationships .Name -}}{{Underline .Name }}{{- else -}}{{ .Name }}{{- end -}}</FONT>
         {{- if .Type -}}
-          <FONT FACE="San Francisco Italic" POINT-SIZE="10" COLOR="#546E7A">&nbsp;{{.Type}}</FONT>
+          <FONT FACE="San Francisco Italic" POINT-SIZE="10" COLOR="#455A64">&nbsp;{{.Type}}</FONT>
         {{- end -}}
         </TD>
       </TR>
       {{- end}}
     </TABLE>
     {{- end -}}>
-    ,fillcolor="{{Color $table.Name}}",
+    ,fillcolor="{{ColorAt $index}}",
     style=filled
     ];
 {{- end -}}

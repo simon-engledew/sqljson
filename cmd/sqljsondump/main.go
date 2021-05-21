@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-
+	"encoding/json"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -10,6 +10,7 @@ import (
 	"github.com/pingcap/parser"
 	"github.com/pingcap/parser/ast"
 	_ "github.com/pingcap/parser/test_driver"
+	"github.com/simon-engledew/sqlinspect/internal/types"
 	"os"
 	"strings"
 	"time"
@@ -33,24 +34,6 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-type CreateColumn struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	Relationship bool   `json:"relationship"`
-}
-
-type CreateTable struct {
-	Name          string          `json:"name"`
-	Columns       []*CreateColumn `json:"columns"`
-	Relationships []string        `json:"relationships"`
-}
-
-type CreateSchema struct {
-	Name   string         `json:"name"`
-	Tables []*CreateTable `json:"tables"`
-	// Relationships map[string][]string `json:"relationships"`
 }
 
 func quoteIdentifier(db *sql.DB, identifier string) (quoted string) {
@@ -101,7 +84,6 @@ FROM information_schema.schemata`).Scan(&schemas))
 
 		var name, statement string
 		must(db.QueryRow(fmt.Sprintf(`SHOW CREATE SCHEMA %s`, quoteIdentifier(db, schema.Name))).Scan(&name, &statement))
-		// fmt.Println(statement)
 
 		var tables Tables
 		must(db.QueryRow(`
@@ -115,18 +97,15 @@ SELECT
 FROM information_schema.tables
 WHERE table_type <> 'VIEW' AND table_schema = ?`, name).Scan(&tables))
 
-		createSchema := CreateSchema{
+		createSchema := types.CreateSchema{
 			Name:   schema.Name,
-			Tables: make([]*CreateTable, 0, len(tables)),
-			// Relationships: make(map[string][]string),
+			Tables: make([]*types.CreateTable, 0, len(tables)),
 		}
 
 		tableNames := make(map[string]struct{})
-		//relationships := make(map[string][]string)
 
 		for _, table := range tables {
 			must(db.QueryRow(fmt.Sprintf("SHOW CREATE TABLE %s.%s", quoteIdentifier(db, table.Schema), quoteIdentifier(db, table.Name))).Scan(&name, &statement))
-			// fmt.Println(statement)
 
 			nodes, _, err := p.Parse(statement, "", "")
 			if err != nil {
@@ -135,80 +114,40 @@ WHERE table_type <> 'VIEW' AND table_schema = ?`, name).Scan(&tables))
 			for _, node := range nodes {
 				create := node.(*ast.CreateTableStmt)
 
-				createTable := CreateTable{
+				createTable := types.CreateTable{
 					Name:          create.Table.Name.String(),
-					Columns:       make([]*CreateColumn, 0, len(create.Cols)),
-					Relationships: make([]string, 0),
+					Columns:       make([]*types.CreateColumn, 0, len(create.Cols)),
+					Relationships: make(map[string]string, 0),
 				}
 
 				tableNames[createTable.Name] = struct{}{}
 
-				//fmt.Printf("[%s] {bgcolor: %q}\n", createTable.Name, colors[i%len(colors)])
-
 				for _, col := range create.Cols {
-					createColumn := &CreateColumn{
+					createColumn := &types.CreateColumn{
 						Name: col.Name.String(),
 						Type: col.Tp.InfoSchemaStr(),
 					}
 					createTable.Columns = append(createTable.Columns, createColumn)
-
-					//if strings.HasSuffix(createColumn.Name, "_id") && strings.EqualFold(createColumn.Type, "bigint(20) unsigned") {
-					//	relationships[createTable.Name] = append(relationships[createTable.Name], prefix+inflection.Plural(createColumn.Name[:len(createColumn.Name)-3]))
-					//}
-
-					//fmt.Printf("  %s {label: %q}\n", createColumn.Name, createColumn.Type)
-					//fmt.Println(col.Name, col.Tp.InfoSchemaStr())
-					//for _, opt := range col.Options {
-					//	switch opt.Tp {
-					//	//case ast.ColumnOptionUniqKey:
-					//	case ast.ColumnOptionNotNull:
-					//		fmt.Println("NN")
-					//	case ast.ColumnOptionAutoIncrement:
-					//		fmt.Println("AI")
-					//	case ast.ColumnOptionPrimaryKey:
-					//		fmt.Println("*")
-					//	}
-					//}
-
-					//for _, option := range col.Options {
-					//	fmt.Println(option.Expr)
-					//}
 				}
 
 				createSchema.Tables = append(createSchema.Tables, &createTable)
 			}
-
-			//fmt.Println()
 		}
 
 		for _, table := range createSchema.Tables {
 			for _, column := range table.Columns {
-				if strings.HasSuffix(column.Name, "_id") && strings.EqualFold(column.Type, "bigint(20) unsigned") {
+				if strings.HasSuffix(column.Name, "_id") {
 					target := prefix + inflection.Plural(column.Name[:len(column.Name)-3])
 
 					if _, ok := tableNames[target]; ok {
-						table.Relationships = append(table.Relationships, target)
-						column.Relationship = true
+						table.Relationships[column.Name] = target
 					}
 				}
 			}
 		}
 
-		//for source, targets := range relationships {
-		//	if _, ok := tableNames[source]; ok {
-		//		for _, target := range targets {
-		//			if _, ok := tableNames[target]; ok {
-		//				createSchema.Relationships[source] = append(createSchema.Relationships[source], target)
-		//				//fmt.Println(source, "1--*", target)
-		//			}
-		//		}
-		//	}
-		//}
-
-		must(dot.ExecuteTemplate(os.Stdout, "dot.tmpl", &createSchema))
-
-		//enc := json.NewEncoder(ioutil.Discard)
-		//enc.SetIndent("", " ")
-		//enc.Encode(&createSchema)
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		must(enc.Encode(&createSchema))
 	}
 }
