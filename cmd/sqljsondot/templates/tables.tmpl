@@ -1,5 +1,5 @@
-{{range $index, $table := .Tables}}
-  {{.Name}} [label=<<TABLE
+{{range $tableName, $table := .}}
+  {{$tableName}} [label=<<TABLE
       BORDER="0"
       CELLPADDING="0"
       CELLSPACING="0.5"
@@ -8,11 +8,11 @@
       >
       <TR>
         <TD ALIGN="CENTER" VALIGN="BOTTOM" WIDTH="134">
-          <FONT POINT-SIZE="14" FACE="San Francisco bold" COLOR="#263238"><B>{{.Name}}</B></FONT>
+          <FONT POINT-SIZE="14" FACE="San Francisco bold" COLOR="#263238"><B>{{$tableName}}</B></FONT>
         </TD>
       </TR>
     </TABLE>
-    {{- if .Columns -}}
+    {{- if $table.Columns -}}
     |
     <TABLE
       BORDER="0"
@@ -20,19 +20,19 @@
       CELLPADDING="0"
       CELLSPACING="4"
       WIDTH="134">
-      {{- range .Columns}}
+      {{- range $columnName, $column := $table.Columns}}
       <TR>
         <TD ALIGN="LEFT">
-        <FONT FACE="San Francisco" POINT-SIZE="12" COLOR="#263238">{{- if index $table.Relationships .Name -}}{{Underline .Name }}{{- else -}}{{ .Name }}{{- end -}}</FONT>
+        <FONT FACE="San Francisco" POINT-SIZE="12" COLOR="#263238">{{- if index $table.Relationships $columnName -}}{{Underline $columnName }}{{- else -}}{{ $columnName }}{{- end -}}</FONT>
         {{- if .Type -}}
-          <FONT FACE="San Francisco Italic" POINT-SIZE="10" COLOR="#455A64">&nbsp;{{.Type}}</FONT>
+          <FONT FACE="San Francisco Italic" POINT-SIZE="10" COLOR="#455A64">&nbsp;{{$column.Type}}</FONT>
         {{- end -}}
         </TD>
       </TR>
       {{- end}}
     </TABLE>
     {{- end -}}>
-    ,fillcolor="{{ColorAt $index}}",
+    ,fillcolor="{{Color 100 $tableName}}",
     style=filled
     ];
 {{- end -}}
