@@ -64,21 +64,25 @@ func Underline(text string) string {
 	return fmt.Sprintf("<U>%s</U>", html.EscapeString(text))
 }
 
-func Color(level int, key string) (string, error) {
+func Hash(key string) (int, error) {
 	h := fnv.New32a()
 	if _, err := h.Write([]byte(key)); err != nil {
-		return "", err
+		return 0, err
 	}
-	return ColorAt(level, int(h.Sum32())), nil
+	return int(h.Sum32()), nil
 }
 
-func ColorAt(level int, index int) string {
+func Color(level int, index int) string {
 	items := colors[level]
 	return items[index%len(items)]
 }
 
 func Convert(r io.Reader, w io.Writer) error {
-	dot, err := template.New("dot").Funcs(template.FuncMap{"Color": Color, "ColorAt": ColorAt, "Underline": Underline}).ParseFS(content, "templates/*")
+	dot, err := template.New("dot").Funcs(template.FuncMap{
+		"Color":     Color,
+		"Underline": Underline,
+		"Hash":      Hash,
+	}).ParseFS(content, "templates/*")
 	if err != nil {
 		return err
 	}
