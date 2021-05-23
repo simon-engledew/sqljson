@@ -5,6 +5,5 @@ type CreateColumn struct {
 }
 
 type CreateTable struct {
-	Columns       map[string]*CreateColumn `json:"columns"`
-	Relationships map[string]string        `json:"relationships"`
+	Columns map[string]*CreateColumn `json:"columns"`
 }

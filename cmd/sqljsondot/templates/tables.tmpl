@@ -1,21 +1,15 @@
-{{range $tableName, $table := .}}
-  {{$tableName}} [label=<
-    <TABLE BORDER="1" COLOR="{{Color 300 (Hash $tableName)}}" CELLPADDING="1" CELLSPACING="4">
+{{ range $tableName, $table := . }}
+  {{ Escape $tableName }} [label=<
+    <TABLE BORDER="0" CELLBORDER="1" COLOR="{{ Color 300 (Hash $tableName) }}" CELLPADDING="4" CELLSPACING="0">
       <TR>
-        <TD ALIGN="CENTER">
-          <FONT POINT-SIZE="14" FACE="San Francisco" COLOR="#263238"><B>{{$tableName}}</B></FONT>
-        </TD>
+        <TD ALIGN="CENTER"><FONT POINT-SIZE="14" FACE="SF Pro Text Medium" COLOR="#263238"><B>{{ Escape $tableName }}</B></FONT></TD>
       </TR>
       {{- range $columnName, $column := $table.Columns}}
       <TR>
-        <TD ALIGN="LEFT" PORT="{{ $columnName }}">
-            <FONT FACE="San Francisco" POINT-SIZE="12" COLOR="#263238">{{- if index $table.Relationships $columnName -}}{{Underline $columnName }}{{- else -}}{{ $columnName }}{{- end -}}</FONT>
-            {{- if .Type -}}
-              <FONT FACE="San Francisco" POINT-SIZE="10" COLOR="#455A64">&nbsp;<I>{{$column.Type}}</I></FONT>
-            {{- end }}
-        </TD>
+        <TD ALIGN="LEFT" PORT="{{ $columnName }}"><FONT FACE="SF Pro Text Medium" POINT-SIZE="12" COLOR="#263238">{{- if index $table.Relationships $columnName -}}<U>{{ Escape $columnName }}</U>{{- else -}}{{ Escape $columnName }}{{- end -}}</FONT>{{- if .Type -}} <FONT FACE="SF Pro Text Medium" POINT-SIZE="10" COLOR="#455A64">&nbsp;<I>{{ $column.Type }}</I></FONT>{{- end }}</TD>
       </TR>
       {{- end}}
     </TABLE>
-    >,fillcolor="{{Color 100 (Hash $tableName)}}",style=filled,shape=plaintext];
+    >,fillcolor="{{ Color 100 (Hash $tableName) }}",style=filled,shape=plaintext];
 {{- end -}}
+

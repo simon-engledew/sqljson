@@ -3,10 +3,10 @@ package main
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
-	"github.com/simon-engledew/sqlinspect/internal/types"
+	"flag"
+	"github.com/simon-engledew/sqljson/internal/relationships"
+	"github.com/simon-engledew/sqljson/internal/types"
 	"hash/fnv"
-	"html"
 	"io"
 	"os"
 	"text/template"
@@ -60,10 +60,6 @@ var colors = map[int][]string{
 	},
 }
 
-func Underline(text string) string {
-	return fmt.Sprintf("<U>%s</U>", html.EscapeString(text))
-}
-
 func Hash(key string) (int, error) {
 	h := fnv.New32a()
 	if _, err := h.Write([]byte(key)); err != nil {
@@ -77,28 +73,36 @@ func Color(level int, index int) string {
 	return items[index%len(items)]
 }
 
-func Convert(r io.Reader, w io.Writer) error {
-	dot, err := template.New("dot").Funcs(template.FuncMap{
-		"Color":     Color,
-		"Underline": Underline,
-		"Hash":      Hash,
-	}).ParseFS(content, "templates/*")
-	if err != nil {
-		return err
+func Transform(relatedTo relationships.RelatedTo) func(r io.Reader, w io.Writer) error {
+	return func(r io.Reader, w io.Writer) error {
+		dot, err := template.New("dot").Funcs(template.FuncMap{
+			"Color":  Color,
+			"Hash":   Hash,
+			"Escape": template.HTMLEscapeString,
+		}).ParseFS(content, "templates/*")
+		if err != nil {
+			return err
+		}
+
+		var createTables map[string]*types.CreateTable
+
+		dec := json.NewDecoder(r)
+		if err := dec.Decode(&createTables); err != nil {
+			return err
+		}
+
+		relatedTables := relationships.Find(createTables, relatedTo)
+
+		return dot.ExecuteTemplate(w, "dot.tmpl", &relatedTables)
 	}
-
-	var createTables map[string]*types.CreateTable
-
-	dec := json.NewDecoder(r)
-	if err := dec.Decode(&createTables); err != nil {
-		return err
-	}
-
-	return dot.ExecuteTemplate(w, "dot.tmpl", &createTables)
 }
 
 func main() {
-	err := Convert(os.Stdin, os.Stdout)
+	prefixFlag := flag.String("prefix", "", "Table prefix")
+
+	flag.Parse()
+
+	err := Transform(relationships.WithPrefix(*prefixFlag, relationships.ForeignKey))(os.Stdin, os.Stdout)
 	if err != nil {
 		panic(err)
 	}
