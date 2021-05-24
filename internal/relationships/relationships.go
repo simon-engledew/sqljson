@@ -22,7 +22,7 @@ func WithPrefix(prefix string, relatedTo RelatedTo) RelatedTo {
 
 // ForeignKey matches columns of the format <singular tableName>_id
 func ForeignKey(columnName string) (tableName string, ok bool) {
-	if strings.HasSuffix(string(columnName), "_id") {
+	if strings.HasSuffix(columnName, "_id") {
 		return inflection.Plural(columnName[:len(columnName)-3]), true
 	}
 	return "", false

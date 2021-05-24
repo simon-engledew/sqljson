@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 	"encoding/json"
-	"flag"
+	"github.com/jpillora/longestcommon"
 	"github.com/simon-engledew/sqljson/internal/relationships"
 	"github.com/simon-engledew/sqljson/internal/types"
 	"hash/fnv"
@@ -73,36 +73,37 @@ func Color(level int, index int) string {
 	return items[index%len(items)]
 }
 
-func Transform(relatedTo relationships.RelatedTo) func(r io.Reader, w io.Writer) error {
-	return func(r io.Reader, w io.Writer) error {
-		dot, err := template.New("dot").Funcs(template.FuncMap{
-			"Color":  Color,
-			"Hash":   Hash,
-			"Escape": template.HTMLEscapeString,
-		}).ParseFS(content, "templates/*")
-		if err != nil {
-			return err
-		}
-
-		var createTables map[string]*types.CreateTable
-
-		dec := json.NewDecoder(r)
-		if err := dec.Decode(&createTables); err != nil {
-			return err
-		}
-
-		relatedTables := relationships.Find(createTables, relatedTo)
-
-		return dot.ExecuteTemplate(w, "dot.tmpl", &relatedTables)
+func Transform(r io.Reader, w io.Writer) error {
+	dot, err := template.New("dot").Funcs(template.FuncMap{
+		"Color":  Color,
+		"Hash":   Hash,
+		"Escape": template.HTMLEscapeString,
+	}).ParseFS(content, "templates/*")
+	if err != nil {
+		return err
 	}
+
+	var createTables map[string]*types.CreateTable
+
+	dec := json.NewDecoder(r)
+	if err := dec.Decode(&createTables); err != nil {
+		return err
+	}
+
+	tableNames := make([]string, 0, len(createTables))
+	for tableName := range createTables {
+		tableNames = append(tableNames, tableName)
+	}
+
+	prefix := longestcommon.Prefix(tableNames)
+
+	relatedTables := relationships.Find(createTables, relationships.WithPrefix(prefix, relationships.ForeignKey))
+
+	return dot.ExecuteTemplate(w, "dot.tmpl", &relatedTables)
 }
 
 func main() {
-	prefixFlag := flag.String("prefix", "", "Table prefix")
-
-	flag.Parse()
-
-	err := Transform(relationships.WithPrefix(*prefixFlag, relationships.ForeignKey))(os.Stdin, os.Stdout)
+	err := Transform(os.Stdin, os.Stdout)
 	if err != nil {
 		panic(err)
 	}
