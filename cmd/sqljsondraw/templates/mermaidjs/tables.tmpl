@@ -1,0 +1,8 @@
+{{ range $tableName, $table := . }}
+    class {{ $tableName }} {
+      {{- range $columnName, $column := $table.Columns}}
+        {{ if .Kind -}}{{ .Kind }}{{ end }} {{ $columnName }}
+      {{- end}}
+    }
+{{- end -}}
+

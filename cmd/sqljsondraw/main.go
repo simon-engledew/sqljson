@@ -3,16 +3,17 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"flag"
 	"github.com/jpillora/longestcommon"
+	"github.com/simon-engledew/sqljson/internal/data"
 	"github.com/simon-engledew/sqljson/internal/relationships"
-	"github.com/simon-engledew/sqljson/internal/types"
 	"hash/fnv"
 	"io"
 	"os"
 	"text/template"
 )
 
-//go:embed templates/*
+//go:embed templates
 var content embed.FS
 
 var colors = map[int][]string{
@@ -73,17 +74,21 @@ func Color(level int, index int) string {
 	return items[index%len(items)]
 }
 
-func Transform(r io.Reader, w io.Writer) error {
-	dot, err := template.New("dot").Funcs(template.FuncMap{
-		"Color":  Color,
-		"Hash":   Hash,
-		"Escape": template.HTMLEscapeString,
-	}).ParseFS(content, "templates/*")
-	if err != nil {
-		return err
+func Transform(r io.Reader, w io.Writer, format string) error {
+	templates := map[string]*template.Template{
+		"dot": template.Must(template.New("dot").Funcs(template.FuncMap{
+			"Color":  Color,
+			"Hash":   Hash,
+			"Escape": template.HTMLEscapeString,
+		}).ParseFS(content, "templates/dot/*")),
+		"mermaidjs": template.Must(template.New("mermaidjs").Funcs(template.FuncMap{
+			"Color":  Color,
+			"Hash":   Hash,
+			"Escape": template.HTMLEscapeString,
+		}).ParseFS(content, "templates/mermaidjs/*")),
 	}
 
-	var createTables map[string]*types.CreateTable
+	var createTables map[string]*data.CreateTable
 
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&createTables); err != nil {
@@ -99,11 +104,14 @@ func Transform(r io.Reader, w io.Writer) error {
 
 	relatedTables := relationships.Find(createTables, relationships.WithPrefix(prefix, relationships.ForeignKey))
 
-	return dot.ExecuteTemplate(w, "dot.tmpl", &relatedTables)
+	return templates[format].ExecuteTemplate(w, "main.tmpl", &relatedTables)
 }
 
 func main() {
-	err := Transform(os.Stdin, os.Stdout)
+	format := flag.String("format", "dot", "diagram format")
+	flag.Parse()
+
+	err := Transform(os.Stdin, os.Stdout, *format)
 	if err != nil {
 		panic(err)
 	}

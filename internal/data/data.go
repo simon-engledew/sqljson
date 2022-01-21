@@ -1,7 +1,8 @@
-package types
+package data
 
 type CreateColumn struct {
 	Type string `json:"type"`
+	Kind string `json:"kind"`
 }
 
 type CreateTable struct {

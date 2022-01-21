@@ -1,0 +1,3 @@
+{{ range $tableName, $table := . }}{{ range $columnName, $dest := $table.Relationships }}
+    {{ Escape $tableName }} --> {{ Escape $dest }}
+{{- end -}}{{- end -}}
